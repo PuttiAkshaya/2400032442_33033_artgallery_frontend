@@ -12,7 +12,7 @@ import Admin from "./pages/Admin";
 import Artist from "./pages/Artist";
 import Curator from "./pages/Curator";
 import Signup from "./pages/signup";
-import Cart from "./pages/Cart";   // ✅ Added
+import Cart from "./pages/Cart";
 import MyOrders from "./pages/MyOrders";
 
 function App() {

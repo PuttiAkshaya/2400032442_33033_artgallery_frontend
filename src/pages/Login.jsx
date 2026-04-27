@@ -1,97 +1,98 @@
 import React, { useState, useContext } from "react";
-import { RoleContext } from "../context/RoleContext";
 import { useNavigate } from "react-router-dom";
+import { RoleContext } from "../context/RoleContext";
+import apiService from "../services/apiService";
+import "./Login.css";
 
 function Login() {
-  const { login } = useContext(RoleContext);
   const navigate = useNavigate();
+  const { login } = useContext(RoleContext);
+  const [method, setMethod] = useState("password"); // password or otp
+  const [step, setStep] = useState(1); // 1 = input, 2 = verify otp
+  const [formData, setFormData] = useState({ username: "", password: "", otp: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("visitor");
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-  const handleLogin = () => {
-    if (!username || !password) {
-      alert("Please enter username and password");
-      return;
+  const handlePasswordLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const userData = await apiService.login({
+        username: formData.username,
+        password: formData.password
+      });
+
+      if (userData && userData.id) {
+        localStorage.setItem("token", `JWT-${userData.id}`);
+        localStorage.setItem("userId", userData.id);
+        localStorage.setItem("userRole", userData.role);
+        login(userData.role);
+        
+        if (userData.role === "ADMIN") navigate("/admin");
+        else if (userData.role === "ARTIST") navigate("/artist");
+        else if (userData.role === "CURATOR") navigate("/curator");
+        else navigate("/gallery");
+      }
+    } catch (err) {
+      setError(err.message || "Invalid credentials or user not found.");
+    } finally {
+      setLoading(false);
     }
-
-    let existingUsers = JSON.parse(localStorage.getItem("registeredUsers"));
-    if (!existingUsers) {
-      existingUsers = [
-        { username: "admin", password: "123", role: "admin" },
-        { username: "artist", password: "123", role: "artist" },
-        { username: "curator", password: "123", role: "curator" },
-        { username: "test", password: "123", role: "visitor" }
-      ];
-      localStorage.setItem("registeredUsers", JSON.stringify(existingUsers));
-    }
-
-    const foundUser = existingUsers.find(u => u.username === username);
-
-    if (!foundUser) {
-      alert("Account does not exist. Please sign up.");
-      return;
-    }
-
-    if (foundUser.password !== password) {
-      alert("Incorrect password. Please try again.");
-      return;
-    }
-
-    if (foundUser.role !== role) {
-      alert(`Invalid role selection! You are registered as ${foundUser.role}. Please select that role.`);
-      return;
-    }
-
-    login(role);
-    localStorage.setItem("username", username);
-
-    if (role === "admin") navigate("/admin");
-    else if (role === "artist") navigate("/artist");
-    else if (role === "curator") navigate("/curator");
-    else navigate("/gallery");
   };
 
   return (
     <div className="container">
-      <div className="card">
-        <h2>Login</h2>
+      <div className="card auth-card login-card">
+        <h2 className="title">Art Access</h2>
+        <p className="subtitle">Secure entry to the gallery</p>
+        {error && <div className="error-banner">{error}</div>}
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+        <form onSubmit={handlePasswordLogin}>
+          <div className="input-group">
+            <label>Sign-in Role</label>
+            <select name="role" onChange={handleChange}>
+               <option value="VISITOR">Visitor</option>
+               <option value="ARTIST">Artist</option>
+               <option value="ADMIN">Admin</option>
+               <option value="CURATOR">Curator</option>
+            </select>
+          </div>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <div className="input-group">
+            <label>Username / Email</label>
+            <input 
+              type="text" 
+              name="username" 
+              required 
+              placeholder="Enter details" 
+              onChange={handleChange} 
+            />
+          </div>
 
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-        >
-          <option value="visitor">Visitor</option>
-          <option value="artist">Artist</option>
-          <option value="curator">Curator</option>
-          <option value="admin">Admin</option>
-        </select>
+          <div className="input-group">
+            <label>Password</label>
+            <input 
+              type="password" 
+              name="password" 
+              required 
+              placeholder="••••••••" 
+              onChange={handleChange} 
+            />
+          </div>
 
-        <button onClick={handleLogin}>Login</button>
+          <button type="submit" disabled={loading} className="submit-btn primary-btn">
+            {loading ? "Verifying..." : "Sign In"}
+          </button>
+        </form>
 
-        <p style={{ textAlign: "center", marginTop: "1rem", color: "#e4e4e7" }}>
-          Don't have an account?{" "}
-          <span
-            onClick={() => navigate("/signup")}
-            style={{ color: "#3b82f6", cursor: "pointer", textDecoration: "underline" }}
-          >
-            Sign up
-          </span>
+        <p className="footer-text">
+          New collector? <span onClick={() => navigate("/signup")} className="link">Register Portal</span>
         </p>
       </div>
     </div>
